@@ -36,9 +36,10 @@ protected:
 
 private:
     Graph graph;
-    int count = 0;
+    int count = 0;//счетчик вершин
+    CheckVertex chv;//нужно для отрисовки вершины
+    CheckVertex chv_arrow;//нужно для отрисовки ребра
     int ver_radious;
-    CheckVertex chv;
     bool mouse_press = false;
 };
 #endif // CANVAS_H

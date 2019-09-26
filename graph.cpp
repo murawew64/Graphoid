@@ -10,8 +10,10 @@ const QSet<Vertex>& Graph::getVertexAsKeys() const
 
 void Graph::insert(const Vertex &v, const QList<pair> &vp)
 {
-    ver_list.insert(v);
-    graph.insert(v, vp);
+    if(!ver_list.contains(v)){
+        ver_list.insert(v);
+        graph.insert(v, vp);
+    }
 }
 
 int Graph::remove(const Vertex &v)

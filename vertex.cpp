@@ -48,7 +48,7 @@ bool Vertex::operator<(const Vertex &v) const
         if(this->point.y() < v.point.y())
             return true;
     }
-
+    return false;
 }
 
 bool Vertex::operator>(const Vertex &v) const

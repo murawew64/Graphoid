@@ -98,7 +98,8 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
 
     //проверяем, активна ли сейчас вершина
     if(chv.first){
-
+        //если не сохранить вершину до изменений координат, то проверка
+        //в цикле после будет выполнена не корректно
         Vertex not_change_ver = chv.second;
 
         auto move_v_data = graph[chv.second];
@@ -143,18 +144,25 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
             //------------------теперь удалим ее
             auto vertex_data = graph[chv_arrow.second];
             vertex_data.pop_back();//там list и она была добавлена последней
-            graph[chv_arrow.second] = vertex_data;
 
             Vertex check_ver = checkVertex(graph.getVertexAsKeys(), QPoint(event->x(), event->y()), ver_radious);
             //Если ребро довели до вершины
-            //----------------------!!!!!---------------------------
-            //Здесь происходит создание узлов
-            //у нас есть две вершины - chv_arraw.second и check_ver
-            if(!check_ver.getName().isEmpty()){
-                int node_x = (chv_arrow.second.getPoint().x() + check_ver.getPoint().x()) / 2;
-                int node_y = (chv_arrow.second.getPoint().y() + check_ver.getPoint().y()) / 2;
-                nodes.append(Node(node_x, node_y, chv.second, check_ver));
+            //если вершина не та же самая(петли создаются через контекстное меню)
+            if(!(chv_arrow.second == check_ver)){
+                //----------------------!!!!!---------------------------
+                //Здесь происходит создание узлов
+                //у нас есть две вершины - chv_arraw.second и check_ver
+                if(!check_ver.getName().isEmpty()){
+                    //добаляем ребро в общую структуру graph
+                    vertex_data.append(pair(check_ver,QList<int>()));
+                    //создаем узел
+                    int node_x = (chv_arrow.second.getPoint().x() + check_ver.getPoint().x()) / 2;
+                    int node_y = (chv_arrow.second.getPoint().y() + check_ver.getPoint().y()) / 2;
+                    nodes.append(Node(node_x, node_y, chv.second, check_ver));
+                }
             }
+            //либо добавили ребро, либо нет и вернули данные обратно
+            graph[chv_arrow.second] = vertex_data;
             //перерисовавыем, чтобы изменения вступили в силу
             repaint();
         }
@@ -162,8 +170,6 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
         //Делаем вершины и ребра не активными
         chv.first = false;
         chv_arrow.first = false;
-
-        //-------!!!!!!
         chv_node.first = false;
     }
     if(event->button() == Qt::RightButton){

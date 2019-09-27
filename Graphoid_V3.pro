@@ -19,11 +19,13 @@ SOURCES += \
     graph.cpp \
     main.cpp \
     canvas.cpp \
+    node.cpp \
     vertex.cpp
 
 HEADERS += \
     canvas.h \
     graph.h \
+    node.h \
     vertex.h
 
 # Default rules for deployment.

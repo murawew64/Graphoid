@@ -4,9 +4,16 @@
 #include <math.h>
 #include <QPainter>
 
-const Vertex checkVertex(const QSet<Vertex> &s, const QPoint &p, int r);
+//Вершина - настоящая вершина, нарисованная на полотне
+//Фиктивная вершина - вершина, не нарисованная на полотне и
+//задействованная для рисования анимации проведения ребра
+//Ребро для анамации - его рисует пользователь до нужной вершины
+//Основное ребро - ребро, уже отображенное на полотне
 
-Canvas::Canvas(QWidget *parent) : QWidget(parent), chv(false, Vertex()), chv_arrow(false, Vertex()), ver_radious(30) { }
+const Vertex checkVertex(const QSet<Vertex> &s, const QPoint &p, int r);
+int checkArrow(const QList<Node> &n, const QPoint &p, int r);
+
+Canvas::Canvas(QWidget *parent) : QWidget(parent), chv(false, Vertex()), chv_arrow(false, Vertex()), chv_node(false, -1), ver_radious(30) { }
 
 //------------------------------!!!!---------------------------------
 //Тут происходит вся отрисовка
@@ -19,7 +26,7 @@ void Canvas::paintEvent(QPaintEvent *event)
     painter.setPen(QPen(Qt::black, 1, Qt::SolidLine, Qt::FlatCap));
     painter.setBrush(QBrush(Qt::red, Qt::SolidPattern));
 
-    //общая отрисовка
+    //отрисовка вершин
     QSet<Vertex> s = graph.getVertexAsKeys();
 
     for(auto v = s.cbegin(); v != s.cend(); ++v){
@@ -37,12 +44,17 @@ void Canvas::paintEvent(QPaintEvent *event)
         if(data_list.back().first.getName().isEmpty()){//проверяем связанную вершину на имя ""
             painter.drawLine(v->getPoint(), data_list.back().first.getPoint());
         }
-        /*
-        for(auto pr = data_list.cbegin(); pr != data_list.cend(); pr++){
-            //!!!!!!!!!!!!!!!пока что рисую одно ребро!!!!!!!
-            painter.drawLine(v->getPoint(), pr->first.getPoint());
-        }
-        */
+    }
+    //отрисовка ребер
+
+    //для теста
+
+    painter.setBrush(QBrush(Qt::blue, Qt::SolidPattern));
+
+    for(auto n = nodes.cbegin(); n != nodes.cend(); ++n){
+        painter.drawLine(n->getVertex().first.getPoint(), n->getPoint());
+        painter.drawEllipse(n->x() - 6, n->y() - 6, 12, 12);
+        painter.drawLine( n->getPoint(), n->getVertex().second.getPoint());
     }
 }
 
@@ -50,6 +62,15 @@ void Canvas::mousePressEvent(QMouseEvent *event)
 {
     //по левой кнопке мыши передвигаем вершину
     if(event->button() == Qt::LeftButton){
+
+        //проверяем, есть ли тут основное ребро
+        int node_index = checkArrow(nodes, QPoint(event->x(), event->y()), 6);
+
+        if(node_index != -1){
+            chv_node.first = true;
+            chv_node.second = node_index;
+        }
+
         //проверяем, есть ли тут вершина
          Vertex check_ver = checkVertex(graph.getVertexAsKeys(), QPoint(event->x(), event->y()), ver_radious);
          //если есть помечаем как активную
@@ -65,20 +86,42 @@ void Canvas::mousePressEvent(QMouseEvent *event)
     }
 }
 
+//Добавлять ребра в graph!!!
+
 void Canvas::mouseMoveEvent(QMouseEvent *event)
 {
     Q_UNUSED(event);
+    //Проверяем, активно ли сейчас основное ребро
+    if(chv_node.first){
+        nodes[chv_node.second].setPoint(QPoint(event->x(), event->y()));
+    }
+
     //проверяем, активна ли сейчас вершина
     if(chv.first){
+
+        Vertex not_change_ver = chv.second;
+
         auto move_v_data = graph[chv.second];
         //так как вершина это ключ, приходится удалять старую
         graph.remove(chv.second);
         chv.second.setPoint(QPoint(event->x(), event->y()));
         //и добавлять с новыми координатами
         graph[chv.second] = move_v_data;
+
+        //-----------------------------!!!!!!!!----------------------
+        //Вершина передвинулась => надо изменить координаты для ребер
+        for(auto ar = nodes.begin(); ar != nodes.end(); ++ar){
+            //в цикл входит, но не выполняются условия
+            if(ar->getVertex().first == not_change_ver){
+                ar->setVertex(chv.second, ar->getVertex().second);
+            }
+            if(ar->getVertex().second == not_change_ver){
+                ar->setVertex(ar->getVertex().first, chv.second);
+            }
+        }
     }
 
-    //проверяем, активно ли сейчас ребро
+    //проверяем, активно ли сейчас ребро для анимации
     if(chv_arrow.first){
         //если активно, изменяем координаты фиктивной вершины
         auto vertex_data = graph[chv_arrow.second];
@@ -104,8 +147,13 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
 
             Vertex check_ver = checkVertex(graph.getVertexAsKeys(), QPoint(event->x(), event->y()), ver_radious);
             //Если ребро довели до вершины
+            //----------------------!!!!!---------------------------
+            //Здесь происходит создание узлов
+            //у нас есть две вершины - chv_arraw.second и check_ver
             if(!check_ver.getName().isEmpty()){
-
+                int node_x = (chv_arrow.second.getPoint().x() + check_ver.getPoint().x()) / 2;
+                int node_y = (chv_arrow.second.getPoint().y() + check_ver.getPoint().y()) / 2;
+                nodes.append(Node(node_x, node_y, chv.second, check_ver));
             }
             //перерисовавыем, чтобы изменения вступили в силу
             repaint();
@@ -114,6 +162,9 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
         //Делаем вершины и ребра не активными
         chv.first = false;
         chv_arrow.first = false;
+
+        //-------!!!!!!
+        chv_node.first = false;
     }
     if(event->button() == Qt::RightButton){
 
@@ -127,7 +178,7 @@ void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
     //Происходит обработка двух событий:
     //1)рисуется вершина(кликнуть два раза по пустому месту)
     //2)рисуется ребро от данной вершины(если кликнуть два раза на существующую)
-    qDebug() << "d click";
+
     if(event->button() == Qt::LeftButton){
         //проверяем есть ли тут вершина
         Vertex check_ver = checkVertex(graph.getVertexAsKeys(), QPoint(event->x(), event->y()), ver_radious);
@@ -172,5 +223,15 @@ const Vertex checkVertex(const QSet<Vertex> &s, const QPoint &p, int r)
             return *v;
     }
     return Vertex();
+}
+
+int checkArrow(const QList<Node> &n, const QPoint &p, int r)
+{
+    for(auto ar = n.cbegin(); ar != n.cend(); ++ar){
+        int res = pow(ar->getPoint().x() - p.x(), 2) + pow(ar->getPoint().y() - p.y(), 2) * 0.9;
+        if(pow(res, 0.5) < r)
+            return n.indexOf(*ar);
+    }
+    return -1;
 }
 

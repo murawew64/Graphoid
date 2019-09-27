@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "graph.h"
+#include <node.h>
 
 /*Приложение V 1.0
  * Умеет:
@@ -18,6 +19,8 @@
  */
 
 using CheckVertex = QPair<bool, Vertex>;
+
+using pair_node = QPair<bool, int>;
 
 class Canvas : public QWidget
 {
@@ -36,9 +39,11 @@ protected:
 
 private:
     Graph graph;
+    QList<Node> nodes;
     int count = 0;//счетчик вершин
     CheckVertex chv;//нужно для отрисовки вершины
     CheckVertex chv_arrow;//нужно для отрисовки ребра
+    pair_node chv_node;
     int ver_radious;
     bool mouse_press = false;
 };
